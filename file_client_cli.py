@@ -94,16 +94,30 @@ def remote_delete(filename):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING)
 
-    print("List file sebelum upload:")
-    remote_list()
+    while True:
+        print("\n=== MENU CLIENT ===")
+        print("1. List file")
+        print("2. Download file")
+        print("3. Upload file")
+        print("4. Delete file")
+        print("5. Keluar")
+        pilihan = input("Pilih menu (1/2/3/4/5): ")
 
-    remote_upload('test_upload.txt')
+        if pilihan == '1':
+            remote_list()
+        elif pilihan == '2':
+            filename = input("Nama file yang ingin didownload: ")
+            remote_get(filename)
+        elif pilihan == '3':
+            path = input("Path file yang ingin diupload: ")
+            remote_upload(path)
+        elif pilihan == '4':
+            filename = input("Nama file yang ingin dihapus: ")
+            remote_delete(filename)
+        elif pilihan == '5':
+            print("Keluar...")
+            break
+        else:
+            print("Pilihan tidak valid.")
 
-    print("List file setelah upload:")
-    remote_list()
-
-    remote_delete('test_upload.txt')
-
-    print("List file setelah delete:")
-    remote_list()
 
