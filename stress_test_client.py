@@ -69,21 +69,32 @@ def download_file(filename):
 
 def client_worker(file_to_upload, file_to_download):
     start_time = time.time()
+
     upload_status, upload_msg = upload_file(file_to_upload)
+    mid_time = time.time()
     download_status, download_msg = download_file(file_to_download)
     end_time = time.time()
-    duration = end_time - start_time
 
-    total_bytes = os.path.getsize(file_to_upload) + os.path.getsize(file_to_download)
-    throughput = total_bytes / duration if duration > 0 else 0
+    upload_size = os.path.getsize(file_to_upload)
+    download_size = os.path.getsize(file_to_download)
+
+    upload_duration = mid_time - start_time
+    download_duration = end_time - mid_time
+    total_duration = end_time - start_time
+
+    upload_throughput = upload_size / upload_duration if upload_duration > 0 else 0
+    download_throughput = download_size / download_duration if download_duration > 0 else 0
 
     return {
         "upload_status": upload_status,
         "upload_msg": upload_msg,
         "download_status": download_status,
         "download_msg": download_msg,
-        "duration": duration,
-        "throughput": throughput
+        "upload_duration": upload_duration,
+        "download_duration": download_duration,
+        "total_duration": total_duration,
+        "upload_throughput": upload_throughput,
+        "download_throughput": download_throughput
     }
 
 def stress_test(pool_type='thread', workers=5, file_upload='file10MB.bin', file_download='file10MB.bin'):
@@ -102,32 +113,36 @@ def stress_test(pool_type='thread', workers=5, file_upload='file10MB.bin', file_
 
     sukses_client = sum(1 for r in results if r['upload_status'] and r['download_status'])
     gagal_client = workers - sukses_client
-    total_duration = sum(r['duration'] for r in results)
-    avg_throughput = sum(r['throughput'] for r in results) / workers
+    avg_total_duration = sum(r['total_duration'] for r in results) / workers
+    avg_upload_tp = sum(r['upload_throughput'] for r in results) / workers
+    avg_download_tp = sum(r['download_throughput'] for r in results) / workers
 
     print("\n===== STRESS TEST SUMMARY =====")
-    print(f"Pool Type      : {pool_type}")
-    print(f"Total Clients  : {workers}")
-    print(f"Success        : {sukses_client}")
-    print(f"Failed         : {gagal_client}")
-    print(f"Avg Duration   : {total_duration / workers:.2f} sec")
-    print(f"Avg Throughput : {avg_throughput / (1024 * 1024):.2f} MB/s")
+    print(f"Pool Type         : {pool_type}")
+    print(f"Total Clients     : {workers}")
+    print(f"Success           : {sukses_client}")
+    print(f"Failed            : {gagal_client}")
+    print(f"Avg Total Duration: {avg_total_duration:.2f} sec")
+    print(f"Avg Upload Throughput : {avg_upload_tp / (1024 * 1024):.2f} MB/s")
+    print(f"Avg Download Throughput : {avg_download_tp / (1024 * 1024):.2f} MB/s")
 
     # Tampilkan tabel detail
-    headers = ["#", "Upload", "Download", "Duration (s)", "Throughput (MB/s)"]
+    headers = ["#", "Upload", "Download", "Upload TP (MB/s)", "Download TP (MB/s)", "Total Duration (s)"]
     table = []
     for idx, res in enumerate(results, 1):
         table.append([
             idx,
             "OK" if res['upload_status'] else "FAIL",
             "OK" if res['download_status'] else "FAIL",
-            f"{res['duration']:.2f}",
-            f"{res['throughput'] / (1024 * 1024):.2f}"
+            f"{res['upload_throughput'] / (1024 * 1024):.2f}",
+            f"{res['download_throughput'] / (1024 * 1024):.2f}",
+            f"{res['total_duration']:.2f}"
         ])
     print("\nDetail per Client:")
     print(tabulate(table, headers=headers, tablefmt="grid"))
 
     return results
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)
@@ -136,10 +151,15 @@ if __name__ == "__main__":
 
     # Contoh eksekusi:
     # untuk file 10MB
+
     stress_test(pool_type='thread', workers=1, file_upload='file10MB.bin', file_download='file10MB.bin')
     stress_test(pool_type='thread', workers=5, file_upload='file10MB.bin', file_download='file10MB.bin')
     stress_test(pool_type='thread', workers=50, file_upload='file10MB.bin', file_download='file10MB.bin')
 
+    # stress_test(pool_type='process', workers=1, file_upload='file10MB.bin', file_download='file10MB.bin')
+    # stress_test(pool_type='process', workers=5, file_upload='file10MB.bin', file_download='file10MB.bin')
+    # stress_test(pool_type='process', workers=50, file_upload='file10MB.bin', file_download='file10MB.bin')
+    
     # # Untuk file 50MB
     # stress_test(pool_type='thread', workers=1, file_upload='file50MB.bin', file_download='file50MB.bin')
     # stress_test(pool_type='thread', workers=5, file_upload='file50MB.bin', file_download='file50MB.bin')

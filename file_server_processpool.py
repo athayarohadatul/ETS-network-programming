@@ -1,20 +1,23 @@
-# file_server.py (ProcessPoolExecutor version)
+# file_server_processpool.py (ProcessPoolExecutor version)
 from socket import *
 import socket
 import logging
-import json
 from concurrent.futures import ProcessPoolExecutor
 
 from file_protocol import FileProtocol
 
-def process_request(string_data):
-    fp = FileProtocol()  # Harus dibuat ulang di tiap proses
-    return fp.proses_string(string_data)
+def handle_client(data):
+    # Fungsi ini dijalankan di process pool, jadi tidak bisa menerima socket secara langsung
+    fp = FileProtocol()
+    request = data.decode()
+    hasil = fp.proses_string(request)
+    hasil = hasil + "\r\n\r\n"
+    return hasil.encode()
 
 def main():
     ip = '0.0.0.0'
     port = 7777
-    max_workers = 5
+    max_workers = 50  # Jumlah maksimal proses dalam pool
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((ip, port))
@@ -25,8 +28,9 @@ def main():
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         while True:
             connection, address = server_socket.accept()
-            logging.warning(f"Connection from {address}")
+            logging.warning(f"Handling connection from {address}")
 
+            # Baca data awal sampai request selesai (\r\n\r\n)
             buffer = ""
             while True:
                 data = connection.recv(1024)
@@ -34,13 +38,14 @@ def main():
                     break
                 buffer += data.decode()
                 if "\r\n\r\n" in buffer:
-                    request, buffer = buffer.split("\r\n\r\n", 1)
                     break
 
-            future = executor.submit(process_request, request)
+            # Kirim request ke process pool
+            future = executor.submit(handle_client, buffer.encode())
             hasil = future.result()
-            hasil = hasil + "\r\n\r\n"
-            connection.sendall(hasil.encode())
+
+            # Kirim hasil kembali ke client
+            connection.sendall(hasil)
             connection.close()
 
 if __name__ == "__main__":
