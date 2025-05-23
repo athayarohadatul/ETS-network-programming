@@ -25,7 +25,7 @@ def handle_client(connection, address):
 def main():
     ip = '0.0.0.0'
     port = 7777
-    max_workers = 1  # Jumlah maksimal thread dalam pool
+    max_workers = 50  # Jumlah maksimal thread dalam pool
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((ip, port))
